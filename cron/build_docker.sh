@@ -64,6 +64,8 @@ else
     fi
     if [[ "$desired_python" == '2.7mu' ]]; then
         desired_python='cp27-cp27mu'
+    elif [[ "$desired_python" == '3.8' ]]; then
+        desired_python='cp38-cp38'
     else
         desired_python="cp${python_nodot}-cp${python_nodot}m"
     fi
@@ -74,9 +76,9 @@ else
         build_script='/remote/manywheel/build.sh'
     fi
     if [[ -n "$build_for_cpu" ]]; then
-        docker_image="soumith/manylinux-cuda100"
+        docker_image="pytorch/manylinux-cuda100"
     else
-        docker_image="soumith/manylinux-cuda$cuda_nodot"
+        docker_image="pytorch/manylinux-cuda$cuda_nodot"
     fi
 fi
 if [[ -n "$ON_SUCCESS_WRITE_ME" ]]; then
