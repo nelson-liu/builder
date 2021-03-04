@@ -66,6 +66,8 @@ else
         desired_python='cp27-cp27mu'
     elif [[ "$desired_python" == '3.8' ]]; then
         desired_python='cp38-cp38'
+    elif [[ "$desired_python" == '3.9' ]]; then
+        desired_python='cp39-cp39'
     else
         desired_python="cp${python_nodot}-cp${python_nodot}m"
     fi
