@@ -159,8 +159,8 @@ function install_112 {
     # TODO: install CUDA 11.2 CuDNN 8.0.5, currently it's the 11.1 version
     # cuDNN license: https://developer.nvidia.com/cudnn/license_agreement
     mkdir tmp_cudnn && cd tmp_cudnn
-    wget -q https://developer.download.nvidia.com/compute/redist/cudnn/v8.0.5/cudnn-11.1-linux-x64-v8.0.5.39.tgz -O cudnn-8.0.tgz
-    tar xf cudnn-8.0.tgz
+    wget -q https://developer.download.nvidia.com/compute/redist/cudnn/v8.1.0/cudnn-11.2-linux-x64-v8.1.0.77.tgz -O cudnn-8.1.tgz
+    tar xf cudnn-8.1.tgz
     cp -a cuda/include/* /usr/local/cuda/include/
     cp -a cuda/lib64/* /usr/local/cuda/lib64/
     cd ..
@@ -241,8 +241,8 @@ function prune_102 {
     export NVPRUNE="/usr/local/cuda-10.2/bin/nvprune"
     export CUDA_LIB_DIR="/usr/local/cuda-10.2/lib64"
 
-    export GENCODE="-gencode arch=compute_35,code=sm_35 -gencode arch=compute_50,code=sm_50 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=sm_75"
-    export GENCODE_CUDNN="-gencode arch=compute_35,code=sm_35 -gencode arch=compute_37,code=sm_37 -gencode arch=compute_50,code=sm_50 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=sm_75"
+    export GENCODE="-gencode arch=compute_35,code=sm_35 -gencode arch=compute_50,code=sm_50 -gencode arch=compute_60,code=sm_60  -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70"
+    export GENCODE_CUDNN="-gencode arch=compute_35,code=sm_35 -gencode arch=compute_37,code=sm_37 -gencode arch=compute_50,code=sm_50 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70"
 
     if [[ -n "$OVERRIDE_GENCODE" ]]; then
         export GENCODE=$OVERRIDE_GENCODE

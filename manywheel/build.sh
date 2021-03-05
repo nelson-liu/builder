@@ -56,12 +56,8 @@ fi
 cuda_version_nodot=$(echo $CUDA_VERSION | tr -d '.')
 TORCH_CUDA_ARCH_LIST="3.5;5.0;6.0;7.0"
 case ${CUDA_VERSION} in
-    11.2)
+    11.[12])
         TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST};7.5;8.0;8.6"
-        EXTRA_CAFFE2_CMAKE_FLAGS+=("-DATEN_NO_TEST=ON")
-        ;;
-    11.1)
-        TORCH_CUDA_ARCH_LIST="5.0;7.0;8.0;8.6"  # removing some to prevent bloated binary size
         EXTRA_CAFFE2_CMAKE_FLAGS+=("-DATEN_NO_TEST=ON")
         ;;
     11.0)
@@ -69,7 +65,7 @@ case ${CUDA_VERSION} in
         EXTRA_CAFFE2_CMAKE_FLAGS+=("-DATEN_NO_TEST=ON")
         ;;
     10.*)
-        TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST};7.5"
+        TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}"
         EXTRA_CAFFE2_CMAKE_FLAGS+=("-DATEN_NO_TEST=ON")
         ;;
     9.*)
@@ -231,7 +227,7 @@ DEPS_SONAME=(
 )
 elif [[ $CUDA_VERSION == "11.2" ]]; then
 DEPS_LIST=(
-    "/usr/local/cuda/lib64/libcudart.so.11.2.72"
+    "/usr/local/cuda/lib64/libcudart.so.11.0"
     "/usr/local/cuda/lib64/libnvToolsExt.so.1"
     "/usr/local/cuda/lib64/libnvrtc.so.11.2"
     "/usr/local/cuda/lib64/libnvrtc-builtins.so"
@@ -239,7 +235,7 @@ DEPS_LIST=(
 )
 
 DEPS_SONAME=(
-    "libcudart.so.11.2.72"
+    "libcudart.so.11.0"
     "libnvToolsExt.so.1"
     "libnvrtc.so.11.2"
     "libnvrtc-builtins.so"

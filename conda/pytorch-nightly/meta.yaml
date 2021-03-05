@@ -12,7 +12,9 @@ requirements:
 
   host:
     - python
-    - numpy >=1.11.*
+    # Conda has some pretty unpredictable behavior when it comes to channel priority
+    # so to be safe on which numpy version we want we default to 1.19
+    - numpy=1.19
     - setuptools
     - pyyaml
     - mkl >=2019
@@ -27,9 +29,11 @@ requirements:
 
   run:
     - python
-    - numpy >=1.11
+    - numpy >=1.19
     - mkl >=2018
     - dataclasses # [py36]
+    - libuv # [win]
+    - intel-openmp # [win]
     - ninja
     - typing_extensions
     - blas * mkl
@@ -40,6 +44,7 @@ build:
   detect_binary_files_with_prefix: False
   string: "{{ environ.get('PYTORCH_BUILD_STRING') }}"
   script_env:
+    - BUILD_SPLIT_CUDA
     - CUDA_VERSION
     - CUDNN_VERSION
     - CONDA_CUDATOOLKIT_CONSTRAINT
@@ -51,6 +56,11 @@ build:
     - USE_FBGEMM
     - USE_SCCACHE # [win]
     - USE_DISTRIBUTED # [unix]
+    - CMAKE_OSX_ARCHITECTURES # [unix]
+    - USE_MKLDNN # [unix]
+    - USE_NNPACK # [unix]
+    - USE_QNNPACK # [unix]
+    - BUILD_TEST # [unix]
   features:
 {{ environ.get('CONDA_CPU_ONLY_FEATURE') }}
 

@@ -2,6 +2,8 @@
 
 set -ex
 
+export MAGMA_HOME=/opt/rocm/magma
+
 # TODO Are these all used/needed?
 export TH_BINARY_BUILD=1
 export USE_STATIC_CUDNN=1
@@ -62,44 +64,66 @@ elif [[ "$OS_NAME" == *"Ubuntu"* ]]; then
     LIBELF_PATH="/usr/lib/x86_64-linux-gnu/libelf.so.1"
 fi
 
-# rocm3.8 and later use TensileLibrary.dat
-if [[ $ROCM_VERSION == "rocm3.7" ]]; then
-    TENSILE_LIBRARY_NAME=TensileLibrary.yaml
+# NOTE: Some ROCm versions have identical dependencies, or very close deps.
+# We conditionalize as generically as possible, capturing only what changes
+# from version to version.
+
+# To make version comparison easier, create an integer representation.
+ROCM_VERSION_CLEAN=$(echo ${ROCM_VERSION} | sed s/rocm//)
+save_IFS="$IFS"
+IFS=. ROCM_VERSION_ARRAY=(${ROCM_VERSION_CLEAN})
+IFS="$save_IFS"
+if [[ ${#ROCM_VERSION_ARRAY[@]} == 2 ]]; then
+    ROCM_VERSION_MAJOR=${ROCM_VERSION_ARRAY[0]}
+    ROCM_VERSION_MINOR=${ROCM_VERSION_ARRAY[1]}
+    ROCM_VERSION_PATCH=0
+elif [[ ${#ROCM_VERSION_ARRAY[@]} == 3 ]]; then
+    ROCM_VERSION_MAJOR=${ROCM_VERSION_ARRAY[0]}
+    ROCM_VERSION_MINOR=${ROCM_VERSION_ARRAY[1]}
+    ROCM_VERSION_PATCH=${ROCM_VERSION_ARRAY[2]}
 else
+    echo "Unhandled ROCM_VERSION ${ROCM_VERSION}"
+    exit 1
+fi
+ROCM_INT=$(($ROCM_VERSION_MAJOR * 10000 + $ROCM_VERSION_MINOR * 100 + $ROCM_VERSION_PATCH))
+
+# rocm3.8 and later use TensileLibrary.dat
+if [[ $ROCM_INT -ge 30800 ]]; then
     TENSILE_LIBRARY_NAME=TensileLibrary.dat
+else
+    TENSILE_LIBRARY_NAME=TensileLibrary.yaml
 fi
 
 # in rocm3.9, libamd_comgr path changed from lib to lib64
-if [[ $ROCM_VERSION == "rocm3.7" || $ROCM_VERSION == "rocm3.8" ]]; then
-    COMGR_LIBDIR="lib"
-else
+if [[ $ROCM_INT -ge 30900 ]]; then
     COMGR_LIBDIR="lib64"
+else
+    COMGR_LIBDIR="lib"
 fi
 
 # in rocm4.0, libamdhip64.so.3 changed to *.so.4
-if [[ $ROCM_VERSION == "rocm4.0" ]]; then
+if [[ $ROCM_INT -ge 40000 ]]; then
     LIBAMDHIP64=libamdhip64.so.4
 else
     LIBAMDHIP64=libamdhip64.so.3
 fi;
 
-# NOTE: Some ROCm versions have identical dependencies, or very close deps.
-# To avoid copy/paste mistakes, version condition branches are combined.
-if [[ $ROCM_VERSION == "rocm3.7" || $ROCM_VERSION == "rocm3.8" || $ROCM_VERSION == "rocm3.9" || $ROCM_VERSION == "rocm3.10"  || $ROCM_VERSION == "rocm4.0" ]]; then
-
 DEPS_LIST=(
     "/opt/rocm/miopen/lib/libMIOpen.so.1"
     "/opt/rocm/hip/lib/$LIBAMDHIP64"
+    "/opt/rocm/hipblas/lib/libhipblas.so.0"
     "/opt/rocm/hiprand/lib/libhiprand.so.1"
     "/opt/rocm/hipsparse/lib/libhipsparse.so.0"
     "/opt/rocm/hsa/lib/libhsa-runtime64.so.1"
     "/opt/rocm/${COMGR_LIBDIR}/libamd_comgr.so.1"
     "/opt/rocm/lib64/libhsakmt.so.1"
+    "/opt/rocm/magma/lib/libmagma.so"
     "/opt/rocm/rccl/lib/librccl.so.1"
     "/opt/rocm/rocblas/lib/librocblas.so.0"
     "/opt/rocm/rocfft/lib/librocfft-device.so.0"
     "/opt/rocm/rocfft/lib/librocfft.so.0"
     "/opt/rocm/rocrand/lib/librocrand.so.1"
+    "/opt/rocm/rocsolver/lib/librocsolver.so.0"
     "/opt/rocm/rocsparse/lib/librocsparse.so.0"
     "/opt/rocm/roctracer/lib/libroctx64.so.1"
     "$LIBGOMP_PATH"
@@ -110,16 +134,19 @@ DEPS_LIST=(
 DEPS_SONAME=(
     "libMIOpen.so.1"
     "$LIBAMDHIP64"
+    "libhipblas.so.0"
     "libhiprand.so.1"
     "libhipsparse.so.0"
     "libhsa-runtime64.so.1"
     "libamd_comgr.so.1"
     "libhsakmt.so.1"
+    "libmagma.so"
     "librccl.so.1"
     "librocblas.so.0"
     "librocfft-device.so.0"
     "librocfft.so.0"
     "librocrand.so.1"
+    "librocsolver.so.0"
     "librocsparse.so.0"
     "libroctx64.so.1"
     "libgomp.so.1"
@@ -150,11 +177,6 @@ DEPS_AUX_DSTLIST=(
     "lib/library/TensileLibrary_gfx908.co"
     "lib/library/$TENSILE_LIBRARY_NAME"
 )
-
-else
-    echo "Unknown ROCm version $ROCM_VERSION"
-    exit 1
-fi
 
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 if [[ -z "$BUILD_PYTHONLESS" ]]; then

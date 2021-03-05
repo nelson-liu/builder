@@ -71,9 +71,9 @@ echo libuv_ROOT=%libuv_ROOT%
 
 :: Install MKL
 rmdir /s /q mkl
-del mkl_2019.4.245.7z
-curl https://s3.amazonaws.com/ossci-windows/mkl_2020.0.166.7z -k -O
-7z x -aoa mkl_2020.0.166.7z -omkl
+del mkl_2020.2.254.7z
+curl https://s3.amazonaws.com/ossci-windows/mkl_2020.2.254.7z -k -O
+7z x -aoa mkl_2020.2.254.7z -omkl
 set CMAKE_INCLUDE_PATH=%cd%\mkl\include
 set LIB=%cd%\mkl\lib;%LIB%
 
@@ -141,7 +141,6 @@ for %%v in (%DESIRED_PYTHON_PREFIX%) do (
     :: Set Flags
     if not "%CUDA_VERSION%"=="cpu" (
         set MAGMA_HOME=%cd%\magma_%CUDA_PREFIX%_%BUILD_TYPE%
-        set CUDNN_VERSION=7
     )
     call %CUDA_PREFIX%.bat
     if ERRORLEVEL 1 exit /b 1

@@ -65,6 +65,12 @@ if [[ -n "$OVERRIDE_PACKAGE_VERSION" ]]; then
     build_version="$OVERRIDE_PACKAGE_VERSION"
     build_number=0
 fi
+
+# differentiate package name for cross compilation to avoid collision
+if [[ -n "$CROSS_COMPILE_ARM64" ]]; then
+    build_version="$build_version.arm64"
+fi
+
 export PYTORCH_BUILD_VERSION=$build_version
 export PYTORCH_BUILD_NUMBER=$build_number
 
@@ -125,6 +131,15 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     # through gloo). This dependency is made available through meta.yaml, so
     # we can override the default and set USE_DISTRIBUTED=1.
     export USE_DISTRIBUTED=1
+
+    # testing cross compilation
+    if [[ -n "$CROSS_COMPILE_ARM64" ]]; then
+        export CMAKE_OSX_ARCHITECTURES=arm64
+        export USE_MKLDNN=OFF
+        export USE_NNPACK=OFF
+        export USE_QNNPACK=OFF
+        export BUILD_TEST=OFF
+    fi
 fi
 
 echo "Will build for all Pythons: ${DESIRED_PYTHON[@]}"
@@ -242,11 +257,16 @@ else
     . ./switch_cuda_version.sh "$desired_cuda"
     # TODO, simplify after anaconda fixes their cudatoolkit versioning inconsistency.
     # see: https://github.com/conda-forge/conda-forge.github.io/issues/687#issuecomment-460086164
-    if [[ "$desired_cuda" == "11.1" ]]; then
+    if [[ "$desired_cuda" == "11.2" ]]; then
+        export CONDA_CUDATOOLKIT_CONSTRAINT="    - cudatoolkit >=11.2,<11.3 # [not osx]"
+        export MAGMA_PACKAGE="    - magma-cuda112 # [not osx and not win]"
+    elif [[ "$desired_cuda" == "11.1" ]]; then
         export CONDA_CUDATOOLKIT_CONSTRAINT="    - cudatoolkit >=11.1,<11.2 # [not osx]"
         export MAGMA_PACKAGE="    - magma-cuda111 # [not osx and not win]"
     elif [[ "$desired_cuda" == "11.0" ]]; then
-        export CONDA_CUDATOOLKIT_CONSTRAINT="    - cudatoolkit >=11.0,<11.1 # [not osx]"
+        # cudatoolkit == 11.0.221 is bugged and gives a libcublas error
+        # see: https://github.com/pytorch/pytorch/issues/51080
+        export CONDA_CUDATOOLKIT_CONSTRAINT="    - cudatoolkit >=11.0,<11.0.221 # [not osx]"
         export MAGMA_PACKAGE="    - magma-cuda110 # [not osx and not win]"
     elif [[ "$desired_cuda" == "10.2" ]]; then
         export CONDA_CUDATOOLKIT_CONSTRAINT="    - cudatoolkit >=10.2,<10.3 # [not osx]"
@@ -365,18 +385,20 @@ for py_ver in "${DESIRED_PYTHON[@]}"; do
         cp "$built_package" "$PYTORCH_FINAL_PACKAGE_DIR/"
     fi
 
-    conda install -y "$built_package"
+    # Install the built package and run tests, unless it's for mac cross compiled arm64
+    if [[ -z "$CROSS_COMPILE_ARM64" ]]; then
+        conda install -y "$built_package"
 
-    # Run tests
-    echo "$(date) :: Running tests"
-    pushd "$pytorch_rootdir"
-    if [[ "$cpu_only" == 1 ]]; then
-        "${SOURCE_DIR}/../run_tests.sh" 'conda' "$py_ver" 'cpu'
-    else
-        "${SOURCE_DIR}/../run_tests.sh" 'conda' "$py_ver" "cu$cuda_nodot"
+        echo "$(date) :: Running tests"
+        pushd "$pytorch_rootdir"
+        if [[ "$cpu_only" == 1 ]]; then
+            "${SOURCE_DIR}/../run_tests.sh" 'conda' "$py_ver" 'cpu'
+        else
+            "${SOURCE_DIR}/../run_tests.sh" 'conda' "$py_ver" "cu$cuda_nodot"
+        fi
+        popd
+        echo "$(date) :: Finished tests"
     fi
-    popd
-    echo "$(date) :: Finished tests"
 
     # Clean up test folder
     source deactivate

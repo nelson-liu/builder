@@ -4,6 +4,8 @@ pushd %SRC_DIR%\..
 
 if "%CUDA_VERSION%" == "102" call internal\driver_update.bat
 if "%CUDA_VERSION%" == "110" call internal\driver_update.bat
+if "%CUDA_VERSION%" == "111" call internal\driver_update.bat
+if "%CUDA_VERSION%" == "112" call internal\driver_update.bat
 if errorlevel 1 exit /b 1
 
 set "ORIG_PATH=%PATH%"
@@ -72,6 +74,12 @@ set "CONDA_EXTRA_ARGS="
 if "%DESIRED_PYTHON%" == "3.9" (
     set "CONDA_EXTRA_ARGS=-c=conda-forge"
 )
+if "%CUDA_VERSION%" == "111" (
+    set "CONDA_EXTRA_ARGS=-c=conda-forge"
+)
+if "%CUDA_VERSION%" == "112" (
+    set "CONDA_EXTRA_ARGS=-c=conda-forge"
+)
 
 rmdir /s /q conda
 del miniconda.exe
@@ -87,11 +95,7 @@ if errorlevel 1 exit /b 1
 call %CONDA_HOME%\condabin\activate.bat testenv
 if errorlevel 1 exit /b 1
 
-if "%DESIRED_PYTHON%" == "3.6" (
-    call conda install -yq future numpy protobuf six dataclasses
-) else (
-    call conda install %CONDA_EXTRA_ARGS% -yq future numpy protobuf six
-)
+call conda install %CONDA_EXTRA_ARGS% -yq future protobuf six
 if ERRORLEVEL 1 exit /b 1
 
 set /a CUDA_VER=%CUDA_VERSION%
@@ -110,11 +114,8 @@ if ERRORLEVEL 1 exit /b 1
 
 if "%CUDA_VERSION%" == "cpu" goto install_cpu_torch
 
-if "%CUDA_VERSION_STR%" == "9.2" (
-    call conda install %CONDA_EXTRA_ARGS% -y "cudatoolkit=%CUDA_VERSION_STR%" -c pytorch -c defaults -c numba/label/dev
-) else (
-    call conda install %CONDA_EXTRA_ARGS% -y "cudatoolkit=%CUDA_VERSION_STR%" -c pytorch
-)
+:: We do an update --all here since that will install the dependencies for any package that's installed offline
+call conda update --all %CONDA_EXTRA_ARGS% -y -c pytorch -c defaults -c numba/label/dev
 if ERRORLEVEL 1 exit /b 1
 
 goto smoke_test
@@ -221,23 +222,16 @@ if "%NVIDIA_GPU_EXISTS%" == "0" (
     goto end
 )
 
-cl %BUILDER_ROOT%\test_example_code\check-torch-cuda.cpp torch_cpu.lib c10.lib torch_cuda.lib /EHsc /link /INCLUDE:?warp_size@cuda@at@@YAHXZ
+set BUILD_SPLIT_CUDA=
+if exist "%install_root%\lib\torch_cuda_cu.lib" if exist "%install_root%\lib\torch_cuda_cpp.lib" set BUILD_SPLIT_CUDA=ON
+
+if "%BUILD_SPLIT_CUDA%" == "ON" (
+    cl %BUILDER_ROOT%\test_example_code\check-torch-cuda.cpp torch_cpu.lib c10.lib torch_cuda_cu.lib torch_cuda_cpp.lib /EHsc /link /INCLUDE:?warp_size@cuda@at@@YAHXZ /INCLUDE:?searchsorted_cuda@native@at@@YA?AVTensor@2@AEBV32@0_N1@Z
+) else (
+    cl %BUILDER_ROOT%\test_example_code\check-torch-cuda.cpp torch_cpu.lib c10.lib torch_cuda.lib /EHsc /link /INCLUDE:?warp_size@cuda@at@@YAHXZ
+)
 .\check-torch-cuda.exe
 if ERRORLEVEL 1 exit /b 1
-
-if NOT "%CUDA_PREFIX%" == "cpu" if "%NVIDIA_GPU_EXISTS%" == "1" (
-    echo Checking that CUDA archs are setup correctly
-    python -c "import torch; torch.randn([3,5]).cuda()"
-    if ERRORLEVEL 1 exit /b 1
-
-    echo Checking that magma is available
-    python -c "import torch; torch.rand(1).cuda(); exit(0 if torch.cuda.has_magma else 1)"
-    if ERRORLEVEL 1 exit /b 1
-
-    echo Checking that CuDNN is available
-    python -c "import torch; exit(0 if torch.backends.cudnn.is_available() else 1)"
-    if ERRORLEVEL 1 exit /b 1
-)
 
 popd
 

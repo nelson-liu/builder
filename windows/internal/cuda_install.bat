@@ -20,6 +20,7 @@ if %CUDA_VER% EQU 101 goto cuda101
 if %CUDA_VER% EQU 102 goto cuda102
 if %CUDA_VER% EQU 110 goto cuda110
 if %CUDA_VER% EQU 111 goto cuda111
+if %CUDA_VER% EQU 112 goto cuda112
 
 echo CUDA %CUDA_VERSION_STR% is not supported
 exit /b 1
@@ -129,6 +130,23 @@ if not exist "%SRC_DIR%\temp_build\cudnn-11.1-windows-x64-v8.0.5.39.zip" (
 
 goto cuda_common
 
+:cuda112
+
+if not exist "%SRC_DIR%\temp_build\cuda_11.2.0_460.89_win10.exe" (
+    curl -k -L https://ossci-windows.s3.amazonaws.com/cuda_11.2.0_460.89_win10.exe --output "%SRC_DIR%\temp_build\cuda_11.2.0_460.89_win10.exe"
+    if errorlevel 1 exit /b 1
+    set "CUDA_SETUP_FILE=%SRC_DIR%\temp_build\cuda_11.2.0_460.89_win10.exe"
+    set "ARGS=nvcc_11.2 cuobjdump_11.2 nvprune_11.2 nvprof_11.2 cupti_11.2 cublas_11.2 cublas_dev_11.2 cudart_11.2 cufft_11.2 cufft_dev_11.2 curand_11.2 curand_dev_11.2 cusolver_11.2 cusolver_dev_11.2 cusparse_11.2 cusparse_dev_11.2 npp_11.2 npp_dev_11.2 nvrtc_11.2 nvrtc_dev_11.2 nvml_dev_11.2"
+)
+
+if not exist "%SRC_DIR%\temp_build\cudnn-11.2-windows-x64-v8.1.0.77.zip" (
+    curl -k -L http://s3.amazonaws.com/ossci-windows/cudnn-11.2-windows-x64-v8.1.0.77.zip --output "%SRC_DIR%\temp_build\cudnn-11.2-windows-x64-v8.1.0.77.zip"
+    if errorlevel 1 exit /b 1
+    set "CUDNN_SETUP_FILE=%SRC_DIR%\temp_build\cudnn-11.2-windows-x64-v8.1.0.77.zip"
+)
+
+goto cuda_common
+
 :cuda_common
 
 if not exist "%SRC_DIR%\temp_build\NvToolsExt.7z" (
@@ -136,7 +154,7 @@ if not exist "%SRC_DIR%\temp_build\NvToolsExt.7z" (
     if errorlevel 1 exit /b 1
 )
 
-if not exist "%SRC_DIR%\temp_build\gpu_driver_dlls.7z" (
+if not exist "%SRC_DIR%\temp_build\gpu_driver_dlls.zip" (
     curl -k -L "https://drive.google.com/u/0/uc?id=1injUyo3lnarMgWyRcXqKg4UGnN0ysmuq&export=download" --output "%SRC_DIR%\temp_build\gpu_driver_dlls.zip"
     if errorlevel 1 exit /b 1
 )
