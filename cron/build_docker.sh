@@ -83,6 +83,12 @@ else
         docker_image="pytorch/manylinux-cuda$cuda_nodot"
     fi
 fi
+
+# Turn on BUILD_SPLIT_CUDA for cu11.1 (PyTorch 1.8.0+ binaries)
+if [[ "${desired_cuda}" == "cu111" ]]; then
+  export BUILD_SPLIT_CUDA="ON"
+fi
+
 if [[ -n "$ON_SUCCESS_WRITE_ME" ]]; then
     success_folder="$(dirname $ON_SUCCESS_WRITE_ME)"
     success_basename="$(basename $ON_SUCCESS_WRITE_ME)"
@@ -143,6 +149,7 @@ nvidia-docker cp "$NIGHTLIES_PYTORCH_ROOT" "$id:/pytorch"
 (
     echo "export DESIRED_PYTHON=${desired_python}"
     echo "export DESIRED_CUDA=${desired_cuda}"
+    echo "export BUILD_SPLIT_CUDA=${BUILD_SPLIT_CUDA}"
     # the following line is true from the docker's perspective
     echo "export PYTORCH_FINAL_PACKAGE_DIR=${docker_package_dir}"
     echo "export CMAKE_ARGS=${CMAKE_ARGS[@]}"
